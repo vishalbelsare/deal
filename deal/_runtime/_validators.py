@@ -15,8 +15,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    Args = tuple[object, ...]   # type: ignore[misc]
-    Kwargs = dict[str, object]  # type: ignore[misc]
+    Args = tuple[object, ...]
+    Kwargs = dict[str, object]
 
 
 @lru_cache(maxsize=16)
@@ -101,8 +101,8 @@ class Validator:
     def _exception(
         self, *,
         message: str | None = None,
-        errors: Kwargs = None,
-        params: Kwargs = None,
+        errors: Kwargs | None = None,
+        params: Kwargs | None = None,
     ) -> Exception:
         exception = self.exception
         if isinstance(exception, Exception):

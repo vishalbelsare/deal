@@ -5,11 +5,16 @@ import builtins
 import enum
 from copy import copy
 from pathlib import Path
+from types import CodeType
 from typing import Iterable, Union
 
-import astroid
-
 from .._cached_property import cached_property
+
+
+try:
+    import astroid
+except ImportError:
+    pass
 
 
 TEMPLATE = (Path(__file__).parent / '_template.py').read_text()
@@ -47,8 +52,8 @@ class Contract:
 
     def __init__(
         self,
-        args: Iterable,
-        kwargs: Iterable,
+        args: Iterable[ast.expr | astroid.NodeNG],
+        kwargs: Iterable[ast.keyword | astroid.Keyword],
         category: Category,
         func_args: ast.arguments,
         context: dict[str, ast.stmt] | None = None,
@@ -123,7 +128,7 @@ class Contract:
         return frozenset(deps)
 
     @staticmethod
-    def _resolve_name(contract):
+    def _resolve_name(contract: astroid.NodeNG) -> astroid.NodeNG:
         if not isinstance(contract, astroid.Name):
             return contract
         definitions = contract.lookup(contract.name)[1]
@@ -157,14 +162,7 @@ class Contract:
         # inject function signature
         func = ast.Lambda(
             args=self.func_args,
-            body=ast.Set(
-                elts=[],
-                lineno=1,
-                col_offset=1,
-                ctx=ast.Load(),
-            ),
-            lineno=1,
-            col_offset=1,
+            body=ast.Set(elts=[], ctx=ast.Load()),
             ctx=ast.Load(),
         )
         module.body[FUNC_INDEX].value = func  # type: ignore
@@ -183,11 +181,9 @@ class Contract:
             contract.body = deps + contract.body
             # if contract is function, add it's definition and assign it's name
             # to `contract` variable.
-            module.body = [contract] + module.body      # type: ignore
-            module.body[FUNC_INDEX].value = ast.Name(   # type: ignore
+            module.body = [contract] + module.body
+            module.body[FUNC_INDEX].value = ast.Name(  # type: ignore[attr-defined]
                 id=contract.name,
-                lineno=1,
-                col_offset=1,
                 ctx=ast.Load(),
             )
             return module
@@ -202,8 +198,6 @@ class Contract:
             body = list(deps)
             return_node = ast.Return(
                 value=contract.body,
-                lineno=1,
-                col_offset=1,
                 ctx=ast.Load(),
             )
             body.append(return_node)
@@ -212,19 +206,18 @@ class Contract:
                 args=contract.args,
                 body=body,
                 decorator_list=[],
-                lineno=1,
-                col_offset=1,
                 ctx=ast.Load(),
             )
             return module
 
         # inject contract if contract is an unknown expression
-        module.body[CONTRACT_INDEX].value = contract  # type: ignore
+        module.body[CONTRACT_INDEX].value = contract  # type: ignore[attr-defined]
         return module
 
     @cached_property
-    def bytecode(self):
-        return compile(self.module, filename='<ast>', mode='exec')
+    def bytecode(self) -> CodeType:
+        module = ast.fix_missing_locations(self.module)
+        return compile(module, filename='<ast>', mode='exec')
 
     def run(self, *args, **kwargs):
         globals = dict(args=args, kwargs=kwargs)

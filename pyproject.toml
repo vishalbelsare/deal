@@ -1,18 +1,26 @@
 [build-system]
-requires = ["flit_core >=2,<4"]
+requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "deal"
-license = "MIT"
-author = "Gram"
-author-email = "gram@orsinium.dev"
-home-page = "https://github.com/life4/deal"
-description-file = "README.md"
-requires-python = ">=3.7"
-keywords = "deal,contracts,pre,post,invariant,decorators,validation,pythonic,functional"
-
-classifiers=[
+[project]
+name = "deal"
+authors = [{ name = "Gram", email = "gram@orsinium.dev" }]
+license = { text = "MIT" }
+readme = "README.md"
+dynamic = ["version", "description"]
+requires-python = ">=3.8"
+keywords = [
+    "deal",
+    "contracts",
+    "pre",
+    "post",
+    "invariant",
+    "decorators",
+    "validation",
+    "pythonic",
+    "functional",
+]
+classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
     "Intended Audience :: Developers",
@@ -23,35 +31,37 @@ classifiers=[
     "Topic :: Software Development :: Quality Assurance",
 ]
 
-requires = [
-    "astroid>=2.11.0",
-]
+[project.urls]
+Repository = "https://github.com/life4/deal"
+Documentation = "https://deal.readthedocs.io/"
 
-[tool.flit.metadata.requires-extra]
+[project.optional-dependencies]
 all = [
-    "deal-solver",
+    "astroid>=2.11.0",    # for type inference in linter
+    "deal-solver>=0.1.2", # for formal verification
+    "hypothesis",         # for property based testing
+    "pygments",           # for syntax highlighting in exceptions
+    "typeguard>=3.0.0",   # for runtime type checking in tests
+    "vaa>=0.2.1",         # for supporting schemes (like marshmallow) as validators
+]
+integration = [ # for integration testing
+    "astroid>=2.11.0",
+    "deal-solver>=0.1.2",
     "hypothesis",
     "pygments",
-    "typeguard",
+    "typeguard<4.0.0",
     "vaa>=0.2.1",
+    "sphinx>=4.5.0",
+    "flake8",
+    "marshmallow",
 ]
 test = [
     "coverage[toml]",
+    "coverage-conditional-plugin",
     "docstring-parser",
-    "flake8",
-    "isort",
-    "marshmallow",
     "pytest-cov",
     "pytest",
-    "sphinx",
     "urllib3",
-
-    # copy-pasted "all" extra
-    "deal-solver",
-    "hypothesis",
-    "pygments",
-    "typeguard",
-    "vaa>=0.2.1",
 ]
 lint = [
     "flake8",
@@ -63,19 +73,19 @@ lint = [
     "unify",
 
     # copy-pasted "all" extra
-    "deal-solver",
+    "deal-solver>=0.1.2",
     "hypothesis",
     "pygments",
-    "typeguard",
+    "typeguard<4.0.0",
 ]
 docs = [
-    "m2r2",
-    "myst-parser",
-    "sphinx==3.5.*",
-    "sphinx-rtd-theme==0.5.*",
+    "m2r2>=0.3.3.post2",     # markdown support in docstrings for sphinx
+    "myst-parser",           # markdown support for dcs in sphinx
+    "sphinx==7.*",           # documentation
+    "sphinx-rtd-theme==2.*", # theme for documentation
 ]
 
-[tool.flit.entrypoints."flake8.extension"]
+[project.entry-points."flake8.extension"]
 DEL = "deal.linter:Checker"
 
 [tool.pytest.ini_options]
@@ -89,10 +99,8 @@ addopts = [
 
 [tool.coverage.run]
 branch = true
-omit = [
-    "deal/linter/_template.py",
-    "deal/mypy.py",
-]
+omit = ["deal/linter/_template.py", "deal/mypy.py"]
+plugins = ["coverage_conditional_plugin"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -104,19 +112,21 @@ exclude_lines = [
     "raise RuntimeError.+unreachable.+",
 ]
 
+[tool.coverage.coverage_conditional_plugin.rules]
+no-astroid = "is_installed('astroid')"
+has-astroid = "not is_installed('astroid')"
+
 [tool.mypy]
 files = ["deal"]
-python_version = 3.7
+python_version = "3.9"
 plugins = ["deal.mypy"]
 ignore_missing_imports = true
 show_error_codes = true
 
 allow_redefinition = true
 check_untyped_defs = true
-# no_implicit_optional = true
 strict_equality = true
 warn_redundant_casts = true
-# warn_unreachable = true
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
@@ -131,4 +141,3 @@ lines_after_imports = 2
 skip = ".venvs/"
 multi_line_output = 5
 include_trailing_comma = true
-
